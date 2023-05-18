@@ -63,4 +63,18 @@ SELECT e1.*,
        e2.first_name AS 상급자
 FROM employees e1 LEFT JOIN employees e2 ON e1.manager_id = e2.employee_id;
 
-                          
+--------------------------------------------------------------------------------
+--오라클 조인 구문
+--FROM절 아래에 테이블을 나열, WHERE에 JOIN의 조건을 쓴다
+
+--INNER JOIN
+SELECT * FROM employees e, departments d
+WHERE e.department_id = d.department_id;
+--LEFT JOIN : 왼쪽에 붙이고자 하는 테이블에 (+)
+SELECT * FROM employees e, departments d
+WHERE e.department_id = d.department_id(+); 
+--RIGHT JOIN 오른쪽에 붙이고자 하는 테이블에 (+)
+SELECT * FROM employees e, departments d
+WHERE e.department_id(+) = d.department_id;
+--FULL OUTER JOIN 은 없다
+--조건이 있다면 AND로 연결해서 사용한다

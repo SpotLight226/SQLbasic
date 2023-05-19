@@ -189,30 +189,23 @@ FROM (SELECT department_id, COUNT(*)
 SELECT *
 FROM employees
 WHERE salary > (SELECT AVG(salary)
-                FROM employees
-                GROUP BY ROLLUP(first_name)
-                HAVING first_name IS NULL);
+                FROM employees);
 -- 사원 수
 SELECT COUNT(*) AS 사원수
 FROM employees
 WHERE salary > (SELECT AVG(salary)
-                FROM employees
-                GROUP BY ROLLUP(first_name)
-                HAVING first_name IS NULL);
+                FROM employees);
                 
 --IT_PROG 보다 높은 사원
 SELECT * 
 FROM employees
 WHERE salary > (SELECT AVG(salary)
                 FROM employees
-                GROUP BY ROLLUP(job_id)
                 HAVING job_id = 'IT_PROG');
 
 --문제 2.
 ---DEPARTMENTS테이블에서 manager_id가 100인 사람의 department_id와
 --EMPLOYEES테이블에서 department_id가 일치하는 모든 사원의 정보를 검색하세요.
-SELECT * FROM departments;
-SELECT * FROM employees;
 
 SELECT *
 FROM employees
@@ -225,41 +218,43 @@ SELECT *
 FROM employees
 WHERE manager_id > (SELECT manager_id FROM employees WHERE first_name = 'Pat');
 
-SELECT *
+SELECT * -- = ANY 도 가능
 FROM employees
-WHERE manager_id = ANY (SELECT manager_id FROM employees WHERE first_name = 'James');
+WHERE manager_id IN (SELECT manager_id FROM employees WHERE first_name = 'James');
 
 --문제 4.
 ---EMPLOYEES테이블 에서 first_name기준으로 내림차순 정렬하고, 41~50번째 데이터의 행 번호, 이름을 출력하세요
 SELECT *
-FROM (SELECT first_name,
+FROM (SELECT first_name || ' ' || last_name AS 이름,
              ROWNUM AS RN
       FROM (SELECT *
             FROM employees
-            ORDER BY first_name DESC))
+            ORDER BY first_name DESC))e
 WHERE RN BETWEEN 41 AND 50;
+--WHERE RN >40 AND RN<=50;
 
 --문제 5.
----EMPLOYEES테이블에서 hire_date기준으로 오름차순 정렬하고, 31~40번째 데이터의 행 번호, 사원id, 이름, 번호, 
---입사일을 출력하세요
+---EMPLOYEES테이블에서 hire_date기준으로 오름차순 정렬하고,
+--31~40번째 데이터의 행 번호, 사원id, 이름, 번호, 입사일을 출력하세요
 SELECT *
-FROM (SELECT ROWNUM AS RN,
-             employee_id,
-             first_name,
-             phone_number,
-             hire_date
-      FROM (SELECT *
+FROM (SELECT ROWNUM RN,
+             e.*
+      FROM (SELECT employee_id 사원ID,
+                   first_name || ' ' || last_name 이름,
+                   phone_number 번호,
+                   hire_date 입사일
             FROM employees
-            ORDER BY hire_date))
+            ORDER BY hire_date) e
+     )
 WHERE RN BETWEEN 31 AND 40;
 
 --문제 6.
 --employees테이블 departments테이블을 left 조인하세요
 --조건) 직원아이디, 이름(성, 이름), 부서아이디, 부서명 만 출력합니다.
 --조건) 직원아이디 기준 오름차순 정렬
-
+--인라인 뷰
 SELECT employee_id AS 직원아이디,
-       CONCAT(first_name, last_name) AS 이름,
+       first_name || ' ' || last_name AS 이름,
        e.department_id AS 부서아이디,
        d.department_name AS 부서명
 FROM employees e
@@ -268,13 +263,23 @@ LEFT JOIN (SELECT department_id,
            FROM departments) d
 ON e.department_id = d.department_id
 ORDER BY employee_id;
+--LEFT JOIN
+SELECT employee_id AS 직원아이디,
+       first_name || ' ' || last_name AS 이름,
+       d.department_id AS 부서아이디,
+       department_name AS 부서명
+FROM employees e 
+LEFT JOIN departments d ON d.department_id = e.department_id
+ORDER BY employee_id;
 
 --문제 7.
 --문제 6의 결과를 (스칼라 쿼리)로 동일하게 조회하세요
 SELECT employee_id AS 직원아이디,
-       CONCAT(first_name, last_name) AS 이름,
+       first_name || ' ' || last_name AS 이름,
        e.department_id AS 부서아이디,
-       (SELECT department_name FROM departments d WHERE d.department_id = e.department_id) AS 부서명 
+       (SELECT department_name
+        FROM departments d
+        WHERE d.department_id = e.department_id) AS 부서명 
 FROM employees e
 ORDER BY employee_id;
 
@@ -282,9 +287,8 @@ ORDER BY employee_id;
 --departments테이블 locations테이블을 left 조인하세요
 --조건) 부서아이디, 부서이름, 매니저아이디, 로케이션아이디, 스트릿_어드레스, 포스트 코드, 시티 만 출력합니다
 --조건) 부서아이디 기준 오름차순 정렬
-SELECT * FROM departments;
-SELECT * FROM locations;
 
+--원하는 것만 뽑은 것
 SELECT d.*,
        l.street_address AS 주소,
        l.postal_code AS 포스트코드,
@@ -298,20 +302,29 @@ LEFT JOIN (SELECT location_id,
 ON d.location_id = l.location_id
 ORDER BY department_id;
 
+--LEFT JOIN
+SELECT d.*,
+       l.street_address AS 주소,
+       l.postal_code AS 포스트코드,
+       l.city AS 도시
+FROM departments d
+LEFT JOIN locations l
+ON d.location_id = l.location_id
+ORDER BY department_id;
+
 --문제 9.
 --문제 8의 결과를 (스칼라 쿼리)로 동일하게 조회하세요
 SELECT d.*,
        (SELECT street_address FROM locations l WHERE d.location_id = l.location_id) AS 주소,
        (SELECT postal_code FROM locations l WHERE d.location_id = l.location_id) AS 우편번호,
        (SELECT city FROM locations l WHERE d.location_id = l.location_id) AS 도시
-FROM departments d;
+FROM departments d
+ORDER BY department_id;
 
 --문제 10.
 --locations테이블 countries 테이블을 left 조인하세요
 --조건) 로케이션아이디, 주소, 시티, country_id, country_name 만 출력합니다
 --조건) country_name기준 오름차순 정렬
-SELECT * FROM locations;
-SELECT * FROM countries;
 
 SELECT l.location_id AS 로케이션아이디,
        l.street_address AS 주소,
@@ -321,14 +334,15 @@ FROM locations l
 LEFT JOIN (SELECT country_id,
                   country_name
            FROM countries) c
-ON l.country_id = c.country_id;
+ON l.country_id = c.country_id
+ORDER BY country_name;
 
 --문제 11.
 --문제 10의 결과를 (스칼라 쿼리)로 동일하게 조회하세요
 SELECT l.location_id AS 로케이션아이디,
        l.street_address AS 주소,
        l.city AS 시티,
-       (SELECT country_id FROM countries c WHERE l.country_id = c.country_id),
+       l.country_id,
        (SELECT country_name FROM countries c WHERE l.country_id = c.country_id)
 FROM locations l;
 
@@ -336,9 +350,159 @@ FROM locations l;
 --employees테이블, departments테이블을 left조인 hire_date를 오름차순 기준으로 1-10번째 데이터만 출력합니다
 --조건) rownum을 적용하여 번호, 직원아이디, 이름, 전화번호, 입사일, 부서아이디, 부서이름 을 출력합니다.
 --조건) hire_date를 기준으로 오름차순 정렬 되어야 합니다. rownum이 틀어지면 안됩니다.
-SELECT * FROM employees;
-SELECT * FROM departments;
+
+SELECT e.*,
+       (SELECT department_name FROM departments d WHERE e.부서아이디 = d.department_id) AS 부서이름
+FROM (SELECT ROWNUM AS 번호,
+             employee_id AS 직원아이디,
+             CONCAT(first_name, last_name) AS 이름,
+             phone_number AS 전화번호,
+             hire_date AS 입사일,
+             department_id AS 부서아이디,
+             department_name AS 부서이름
+      FROM (SELECT *
+            FROM employees
+            ORDER BY hire_date)) e
+ORDER BY 번호;
+
+SELECT *
+FROM (SELECT ROWNUM AS 번호,
+             f.*
+      FROM (SELECT employee_id AS 직원아이디,
+                   CONCAT(first_name, last_name) AS 이름,
+                   phone_number AS 전화번호,
+                   hire_date AS 입사일,
+                   e.department_id AS 부서아이디,
+                   d.department_name AS 부서이름
+            FROM employees e
+            LEFT JOIN departments d
+            ON e.department_id = d.department_id
+            ORDER BY hire_date) f ) d
+WHERE 번호 > 0 AND 번호 <=10;
+
+
+
 
 --문제 13. 
 --EMPLOYEES 과 DEPARTMENTS 테이블에서 JOB_ID가 SA_MAN 사원의 정보의 LAST_NAME, JOB_ID, 
 --DEPARTMENT_ID,DEPARTMENT_NAME을 출력하세요
+SELECT * FROM employees;
+SELECT * FROM departments;
+
+SELECT last_name,
+       job_id,
+       e.department_id,
+       (SELECT department_name
+       FROM departments d
+       WHERE e.department_id = d.department_id) AS 부서명
+FROM employees e
+WHERE job_id = 'SA_MAN';
+
+--LEFT JOIN
+SELECT *
+FROM (SELECT e.last_name,
+             e.job_id,
+             e.department_id,
+             d.department_name
+      FROM employees e
+      LEFT JOIN departments d
+      ON e.department_id = d.department_id
+      WHERE job_id = 'SA_MAN');
+--
+SELECT e.last_name,
+       e.job_id,
+       e.department_id,
+       d.department_name
+FROM (SELECT * -- 먼저 WHERE 절을 실행한 후 조인
+      FROM employees
+      WHERE job_id = 'SA_MAN') e
+JOIN departments d
+ON e.department_id = d.department_id;
+
+
+--문제 14
+--DEPARTMENT테이블에서 각 부서의 ID, NAME, MANAGER_ID와 부서에 속한 인원수를 출력하세요.
+--인원수 기준 내림차순 정렬하세요.
+--사람이 없는 부서는 출력하지 뽑지 않습니다
+
+SELECT s.*,
+       COUNT(*)
+FROM (SELECT d.department_id,
+             d.department_name,
+             d.manager_id
+      FROM employees e
+      JOIN departments d
+      ON e.department_id = d.department_id) s
+GROUP BY (s.department_name,s.department_id,s.manager_id)
+ORDER BY COUNT(*) DESC;
+
+-- 이런 식으로 간단하게
+SELECT d.department_id,
+       d.department_name,
+       d.manager_id,
+       e.인원수
+FROM departments d
+JOIN (SELECT department_id, --부서별 사원수, INNER JOIN으로 NULL값 삭제
+             COUNT(*) AS 인원수
+      FROM employees
+      GROUP BY department_id) e
+ON d.department_id = e.department_id
+ORDER BY 인원수 DESC;
+
+--반대로 employees에 JOIN하는 방식 만들어 보기
+
+
+--문제 15
+--부서에 대한 정보 전부와, 주소, 우편번호, 부서별 평균 연봉을 구해서 출력하세요
+--부서별 평균이 없으면 0으로 출력하세요
+
+SELECT d.*,
+       l.street_address 주소,
+       l.postal_code 우편번호,
+       NVL(e.평균연봉, 0) 부서별평균연봉
+FROM departments d
+LEFT JOIN locations l
+ON d.location_id = l.location_id
+LEFT JOIN (SELECT department_id,
+                  TRUNC(AVG(salary)) AS 평균연봉
+           FROM employees 
+           GROUP BY department_id) e
+ON d.department_id = e.department_id;   
+
+--
+SELECT d.*,
+       l.street_address 주소,
+       l.postal_code 우편번호,
+       NVL(e.salary, 0)
+FROM departments d
+LEFT JOIN (SELECT department_id,
+                  TRUNC(AVG(salary)) AS salary
+           FROM employees
+           GROUP BY department_id) e
+ON d.department_id = e.department_id
+LEFT JOIN locations l
+ON d.location_id = l.location_id;
+
+--문제 16
+--문제 15결과에 대해 DEPARTMENT_ID기준으로 내림차순 정렬해서 ROWNUM을 붙여
+--1-10데이터 까지만 출력하세요
+
+SELECT *
+FROM ( SELECT ROWNUM RN,
+              X.*
+       FROM (SELECT d.*,
+                    l.street_address 주소,
+                    l.postal_code 우편번호,
+                    NVL(e.salary, 0)
+             FROM departments d
+             LEFT JOIN (SELECT department_id,
+                        TRUNC(AVG(salary)) AS salary
+                        FROM employees
+                        GROUP BY department_id) e
+             ON d.department_id = e.department_id
+             LEFT JOIN locations l
+             ON d.location_id = l.location_id
+             ORDER BY d.department_id DESC
+             ) x
+    )
+WHERE RN BETWEEN 1 AND 10;

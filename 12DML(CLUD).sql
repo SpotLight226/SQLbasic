@@ -135,7 +135,7 @@ INSERT INTO DEPTS (department_id, department_name, manager_id, location_id)
 VALUES (310, '인사', 302, 1800);
 INSERT INTO DEPTS (department_id, department_name, manager_id, location_id)
 VALUES (320, '영업', 303, 1700);
-DELETE FROM DEPTS WHERE department_id = 320;
+
 COMMIT;
 --문제 2.
 --DEPTS테이블의 데이터를 수정합니다
@@ -166,7 +166,8 @@ WHERE department_name = 'IT Helpdesk';
 UPDATE DEPTS
 SET manager_id = 301
 WHERE department_name IN ('재정','인사','영업');
-      
+
+COMMIT;      
 SELECT * FROM DEPTS;
 --문제 3.
 --삭제의 조건은 항상 primary key로 합니다, 여기서 primary key는 department_id라고 가정합니다.
@@ -188,20 +189,16 @@ DELETE FROM DEPTS WHERE department_id = 220;
 --1
 SELECT * FROM DEPTS;
 --2 
-SELECT * FROM DEPTSC;
-CREATE TABLE DEPTSC AS (SELECT * FROM DEPTS WHERE 1= 1);
-DELETE FROM DEPTSC WHERE department_id > 200;
+DELETE FROM DEPTS WHERE department_id >= 200;
 --3
 UPDATE DEPTS
 SET manager_id = 100
 WHERE manager_id IS NOT NULL;
 --4
-CREATE TABLE departm AS (SELECT * FROM departments WHERE 1 = 1);
-SELECT * FROM departm;
 SELECT * FROM DEPTS;
 
-MERGE INTO departm d
-    USING (SELECT * FROM DEPTS ) s
+MERGE INTO DEPTS d
+    USING (SELECT * FROM departments ) s
     ON (d.department_id = s.department_id)
 WHEN MATCHED THEN
     UPDATE SET 
@@ -210,9 +207,12 @@ WHEN MATCHED THEN
         d.location_id = s.location_id
 WHEN NOT MATCHED THEN
     INSERT VALUES
-        (s.department_name,
+        (s.department_id,
+         s.department_name,
          s.manager_id,
          s.location_id);
+         
+COMMIT;
 --문제 5
 --1. jobs_it 사본 테이블을 생성하세요 (조건은 min_salary가 6000보다 큰 데이터만 복사합니다)
 --2. jobs_it 테이블에 다음 데이터를 추가하세요
@@ -244,3 +244,4 @@ WHEN NOT MATCHED THEN
                     j2.min_salary,
                     j2.max_salary);
 ROLLBACK;
+COMMIT;
